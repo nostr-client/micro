@@ -6,6 +6,8 @@ client is one HTML file that imports web components from their own repos.
 
 **Live:** https://nostr-client.github.io/micro/
 
+![screenshot](screenshot.png)
+
 ```html
 <script type="module">
   import 'https://nostr-client.github.io/login/login.js'
