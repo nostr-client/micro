@@ -41,6 +41,7 @@
   <button data-view="global" class="active">Global</button>
   <button data-view="following">Following</button>
   <button data-view="mentions">Mentions</button>
+  <button data-view="search">Search</button>
   <button data-view="profile">Profile</button>
   <button data-view="relays">Relays</button>
 </nav>
@@ -57,6 +58,10 @@
 
 <div class="view" id="view-mentions">
   <nostr-notifications></nostr-notifications>
+</div>
+
+<div class="view" id="view-search">
+  <nostr-search></nostr-search>
 </div>
 
 <div class="view" id="view-profile">
@@ -92,6 +97,7 @@
     import('https://nostr-client.github.io/feed/feed.js'),
     import('https://nostr-client.github.io/thread/thread.js'),
     import('https://nostr-client.github.io/notifications/notifications.js'),
+    import('https://nostr-client.github.io/search/search.js'),
     import('https://nostr-client.github.io/contacts/contacts.js'),
     import('https://nostr-client.github.io/profile-editor/profile-editor.js'),
   ])
