@@ -128,10 +128,12 @@
     history.pushState({ thread: id }, '', '#' + id)
     scrollTo(0, 0)
   }
+  const HEX = /^[0-9a-f]{64}$/
   document.getElementById('back').onclick = () => history.back()
   addEventListener('popstate', () => {
     const id = location.hash.slice(1)
-    /^[0-9a-f]{64}$/.test(id) ? (thread.setAttribute('event-id', id), show('thread')) : show(currentTab)
+    if (HEX.test(id)) { thread.setAttribute('event-id', id); show('thread') }
+    else show(currentTab)
   })
   document.addEventListener('nostr:note-click', (e) => {
     const target = e.detail.targetId ?? parseRefs(e.detail.event).root ?? e.detail.event.id
