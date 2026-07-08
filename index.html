@@ -51,7 +51,8 @@
   <button data-view="mentions">Mentions</button>
   <button data-view="search">Search</button>
   <button data-view="profile">Profile</button>
-  <button data-view="relays">Relays</button>
+  <button data-view="wallet">Wallet</button>
+  <button data-view="relays">Settings</button>
 </nav>
 
 <div class="view active" id="view-global">
@@ -78,7 +79,14 @@
   <nostr-contacts></nostr-contacts>
 </div>
 
+<div class="view" id="view-wallet">
+  <nostr-wallet></nostr-wallet>
+</div>
+
 <div class="view" id="view-relays">
+  <p class="quiet" style="text-align:left">Theme</p>
+  <nostr-theme-picker></nostr-theme-picker>
+  <p class="quiet" style="text-align:left">Relays</p>
   <nostr-relay-manager></nostr-relay-manager>
 </div>
 
@@ -106,7 +114,11 @@
   const { applySavedRelays } = await import('https://nostr-client.github.io/relay-manager/relay-manager.js')
   applySavedRelays() // restore the user's relay choices before anything subscribes
 
+  const { restoreTheme } = await import('https://nostr-client.github.io/theme/themes.js')
+  restoreTheme()
   import('https://nostr-client.github.io/reactions/reactions.js') // notes grow reaction bars
+  await import('https://nostr-client.github.io/wallet/wallet.js') // built-in wallet + tips
+  await import('https://nostr-client.github.io/theme/themes.js')
   await Promise.all([
     import('https://nostr-client.github.io/login/login.js'),
     import('https://nostr-client.github.io/composer/composer.js'),
