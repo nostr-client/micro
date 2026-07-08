@@ -5,26 +5,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>micro — a composed nostr client</title>
 <meta name="description" content="A microblogging nostr client composed entirely from independent no-build components.">
+<link rel="stylesheet" href="https://nostr-client.github.io/theme/theme.css">
 <style>
-  :root { color-scheme: light; --nostr-accent: #8e30eb; }
-  * { box-sizing: border-box; }
-  body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 0 auto;
-    padding: 0 1rem 4rem; line-height: 1.5; }
+  body { max-width: 40rem; margin: 0 auto; padding: 0 1rem 5rem; }
   header { display: flex; justify-content: space-between; align-items: center;
-    gap: 1rem; padding: 1rem 0; flex-wrap: wrap;
-    border-bottom: 1px solid rgba(127,127,127,.25); }
-  header h1 { font-size: 1.2rem; margin: 0; }
+    gap: 1rem; padding: 1rem 0; flex-wrap: wrap; position: sticky; top: 0;
+    background: color-mix(in srgb, var(--nc-bg) 88%, transparent);
+    backdrop-filter: blur(8px); z-index: 5;
+    border-bottom: 1px solid var(--nc-line); }
+  header h1 { font-size: 1.15rem; margin: 0; }
   header h1 a { text-decoration: none; color: inherit; }
-  header h1 .accent { color: var(--nostr-accent); }
-  nav { display: flex; gap: .3rem; margin: 1rem 0; }
-  nav button { font: inherit; cursor: pointer; border: none; background: none;
-    color: inherit; padding: .4em .9em; border-radius: 999px; opacity: .65; }
-  nav button.active { background: rgba(142,48,235,.14); color: var(--nostr-accent);
-    opacity: 1; font-weight: 600; }
+  header h1 .accent { color: var(--nc-accent); }
+  nav { display: flex; gap: .25rem; margin: 1rem 0; flex-wrap: wrap; }
+  nav button { font: inherit; font-size: .9rem; cursor: pointer; border: none;
+    background: none; color: var(--nc-soft); padding: .4em .95em; border-radius: 999px; }
+  nav button.active { background: var(--nc-accent-soft); color: var(--nc-accent); font-weight: 650; }
+  nav button:hover:not(.active) { background: var(--nc-inset); }
   .view { display: none; } .view.active { display: block; }
-  nostr-composer { margin-bottom: 1.2rem; }
-  #following-empty { opacity: .65; padding: 2rem 0; text-align: center; }
-  footer { margin-top: 3rem; font-size: .8rem; opacity: .55; text-align: center; }
+  nostr-composer { margin-bottom: 1rem; }
+  #following-empty, .quiet { color: var(--nc-soft); padding: 2rem 0; text-align: center; }
+  .back { font: inherit; cursor: pointer; border: none; background: none;
+    color: var(--nc-soft); padding: 0 0 .9rem; font-size: .9rem; }
+  .back:hover { color: var(--nc-ink); }
+  footer { margin-top: 3rem; font-size: .78rem; color: var(--nc-faint); text-align: center; }
   footer a { color: inherit; }
 </style>
 </head>
@@ -34,10 +37,12 @@
   <nostr-login></nostr-login>
 </header>
 
-<nav>
+<nav id="tabs">
   <button data-view="global" class="active">Global</button>
   <button data-view="following">Following</button>
+  <button data-view="mentions">Mentions</button>
   <button data-view="profile">Profile</button>
+  <button data-view="relays">Relays</button>
 </nav>
 
 <div class="view active" id="view-global">
@@ -50,39 +55,86 @@
   <nostr-feed id="following-feed" limit="30" authors="none" hidden></nostr-feed>
 </div>
 
+<div class="view" id="view-mentions">
+  <nostr-notifications></nostr-notifications>
+</div>
+
 <div class="view" id="view-profile">
   <nostr-profile-editor></nostr-profile-editor>
+  <p class="quiet" style="text-align:left">Your follows:</p>
+  <nostr-contacts></nostr-contacts>
+</div>
+
+<div class="view" id="view-relays">
+  <nostr-relay-manager></nostr-relay-manager>
+</div>
+
+<div class="view" id="view-thread">
+  <button class="back" id="back">← back</button>
+  <nostr-thread id="thread"></nostr-thread>
 </div>
 
 <footer>
-  composed from <a href="https://github.com/nostr-client">nostr-client</a> parts —
-  <a href="https://nostr-client.github.io/login/">login</a> ·
-  <a href="https://nostr-client.github.io/composer/">composer</a> ·
-  <a href="https://nostr-client.github.io/feed/">feed</a> ·
-  <a href="https://nostr-client.github.io/profile-editor/">profile-editor</a> ·
-  <a href="https://nostr-client.github.io/pool/">pool</a>
-  — no build, no bundler, 100% vanilla JS
+  composed from <a href="https://nostr-client.github.io/">nostr-client</a> parts —
+  login · composer · feed · thread · note · reactions · notifications · contacts ·
+  profile-editor · relay-manager · pool — no build, no bundler, 100% vanilla JS.
+  prefer calm? try <a href="https://nostr-client.github.io/zen/">zen</a>
 </footer>
 
 <script type="module">
-  import 'https://nostr-client.github.io/login/login.js'
-  import 'https://nostr-client.github.io/composer/composer.js'
-  import 'https://nostr-client.github.io/feed/feed.js'
-  import 'https://nostr-client.github.io/profile-editor/profile-editor.js'
-  import { defaultPool } from 'https://nostr-client.github.io/pool/pool.js'
+  import { applySavedRelays } from 'https://nostr-client.github.io/relay-manager/relay-manager.js'
+  applySavedRelays() // restore the user's relay choices before anything subscribes
 
-  // ---- tabs
+  import('https://nostr-client.github.io/reactions/reactions.js') // notes grow reaction bars
+  await Promise.all([
+    import('https://nostr-client.github.io/login/login.js'),
+    import('https://nostr-client.github.io/composer/composer.js'),
+    import('https://nostr-client.github.io/feed/feed.js'),
+    import('https://nostr-client.github.io/thread/thread.js'),
+    import('https://nostr-client.github.io/notifications/notifications.js'),
+    import('https://nostr-client.github.io/contacts/contacts.js'),
+    import('https://nostr-client.github.io/profile-editor/profile-editor.js'),
+  ])
+  const { parseRefs } = await import('https://nostr-client.github.io/thread/thread.js')
+  const { defaultPool } = await import('https://nostr-client.github.io/pool/pool.js')
+
+  // ---- tabs + thread as a routable view
   const tabs = document.querySelectorAll('nav button')
+  let currentTab = 'global'
+  function show(view) {
+    for (const t of tabs) t.classList.toggle('active', t.dataset.view === view)
+    for (const v of document.querySelectorAll('.view')) {
+      v.classList.toggle('active', v.id === 'view-' + view)
+    }
+  }
   for (const tab of tabs) {
     tab.onclick = () => {
-      for (const t of tabs) t.classList.toggle('active', t === tab)
-      for (const v of document.querySelectorAll('.view')) {
-        v.classList.toggle('active', v.id === 'view-' + tab.dataset.view)
-      }
+      currentTab = tab.dataset.view
+      if (location.hash) history.pushState({}, '', location.pathname)
+      show(currentTab)
     }
   }
 
-  // ---- following: user's kind-3 contact list drives the second feed
+  const thread = document.getElementById('thread')
+  function openThread(id) {
+    thread.setAttribute('event-id', id)
+    show('thread')
+    history.pushState({ thread: id }, '', '#' + id)
+    scrollTo(0, 0)
+  }
+  document.getElementById('back').onclick = () => history.back()
+  addEventListener('popstate', () => {
+    const id = location.hash.slice(1)
+    /^[0-9a-f]{64}$/.test(id) ? (thread.setAttribute('event-id', id), show('thread')) : show(currentTab)
+  })
+  document.addEventListener('nostr:note-click', (e) => {
+    const target = e.detail.targetId ?? parseRefs(e.detail.event).root ?? e.detail.event.id
+    openThread(target)
+  })
+  const initial = location.hash.slice(1)
+  if (/^[0-9a-f]{64}$/.test(initial)) { thread.setAttribute('event-id', initial); show('thread') }
+
+  // ---- following feed from the kind-3 contact list
   const followingFeed = document.getElementById('following-feed')
   const followingEmpty = document.getElementById('following-empty')
 
@@ -96,13 +148,14 @@
       followingFeed.hidden = false
       followingFeed.setAttribute('authors', follows.slice(0, 500).join(','))
     } else {
-      followingEmpty.textContent = 'No contact list (kind 3) found for this key yet.'
+      followingEmpty.textContent = 'No follows yet — find people in Global.'
       followingEmpty.hidden = false
       followingFeed.hidden = true
     }
   }
 
   window.addEventListener('nostr:login', (e) => loadFollowing(e.detail.pubkey))
+  window.addEventListener('nostr:contacts-changed', () => window.nostrPubkey && loadFollowing(window.nostrPubkey))
   window.addEventListener('nostr:logout', () => {
     followingEmpty.textContent = 'Log in to see notes from people you follow.'
     followingEmpty.hidden = false
