@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>micro — a composed nostr client</title>
+<meta name="description" content="A microblogging nostr client composed entirely from independent no-build components.">
+<style>
+  :root { color-scheme: light dark; --nostr-accent: #8e30eb; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 0 auto;
+    padding: 0 1rem 4rem; line-height: 1.5; }
+  header { display: flex; justify-content: space-between; align-items: center;
+    gap: 1rem; padding: 1rem 0; flex-wrap: wrap;
+    border-bottom: 1px solid rgba(127,127,127,.25); }
+  header h1 { font-size: 1.2rem; margin: 0; }
+  header h1 a { text-decoration: none; color: inherit; }
+  header h1 .accent { color: var(--nostr-accent); }
+  nav { display: flex; gap: .3rem; margin: 1rem 0; }
+  nav button { font: inherit; cursor: pointer; border: none; background: none;
+    color: inherit; padding: .4em .9em; border-radius: 999px; opacity: .65; }
+  nav button.active { background: rgba(142,48,235,.14); color: var(--nostr-accent);
+    opacity: 1; font-weight: 600; }
+  .view { display: none; } .view.active { display: block; }
+  nostr-composer { margin-bottom: 1.2rem; }
+  #following-empty { opacity: .65; padding: 2rem 0; text-align: center; }
+  footer { margin-top: 3rem; font-size: .8rem; opacity: .55; text-align: center; }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="https://github.com/nostr-client/micro"><span class="accent">▲</span> micro</a></h1>
+  <nostr-login></nostr-login>
+</header>
+
+<nav>
+  <button data-view="global" class="active">Global</button>
+  <button data-view="following">Following</button>
+  <button data-view="profile">Profile</button>
+</nav>
+
+<div class="view active" id="view-global">
+  <nostr-composer placeholder="What's happening?"></nostr-composer>
+  <nostr-feed limit="30"></nostr-feed>
+</div>
+
+<div class="view" id="view-following">
+  <div id="following-empty">Log in to see notes from people you follow.</div>
+  <nostr-feed id="following-feed" limit="30" authors="none" hidden></nostr-feed>
+</div>
+
+<div class="view" id="view-profile">
+  <nostr-profile-editor></nostr-profile-editor>
+</div>
+
+<footer>
+  composed from <a href="https://github.com/nostr-client">nostr-client</a> parts —
+  <a href="https://nostr-client.github.io/login/">login</a> ·
+  <a href="https://nostr-client.github.io/composer/">composer</a> ·
+  <a href="https://nostr-client.github.io/feed/">feed</a> ·
+  <a href="https://nostr-client.github.io/profile-editor/">profile-editor</a> ·
+  <a href="https://nostr-client.github.io/pool/">pool</a>
+  — no build, no bundler, 100% vanilla JS
+</footer>
+
+<script type="module">
+  import 'https://nostr-client.github.io/login/login.js'
+  import 'https://nostr-client.github.io/composer/composer.js'
+  import 'https://nostr-client.github.io/feed/feed.js'
+  import 'https://nostr-client.github.io/profile-editor/profile-editor.js'
+  import { defaultPool } from 'https://nostr-client.github.io/pool/pool.js'
+
+  // ---- tabs
+  const tabs = document.querySelectorAll('nav button')
+  for (const tab of tabs) {
+    tab.onclick = () => {
+      for (const t of tabs) t.classList.toggle('active', t === tab)
+      for (const v of document.querySelectorAll('.view')) {
+        v.classList.toggle('active', v.id === 'view-' + tab.dataset.view)
+      }
+    }
+  }
+
+  // ---- following: user's kind-3 contact list drives the second feed
+  const followingFeed = document.getElementById('following-feed')
+  const followingEmpty = document.getElementById('following-empty')
+
+  async function loadFollowing(pubkey) {
+    const contacts = await defaultPool().get({ kinds: [3], authors: [pubkey] })
+    const follows = (contacts?.tags ?? [])
+      .filter((t) => t[0] === 'p' && /^[0-9a-f]{64}$/.test(t[1] ?? ''))
+      .map((t) => t[1])
+    if (follows.length) {
+      followingEmpty.hidden = true
+      followingFeed.hidden = false
+      followingFeed.setAttribute('authors', follows.slice(0, 500).join(','))
+    } else {
+      followingEmpty.textContent = 'No contact list (kind 3) found for this key yet.'
+      followingEmpty.hidden = false
+      followingFeed.hidden = true
+    }
+  }
+
+  window.addEventListener('nostr:login', (e) => loadFollowing(e.detail.pubkey))
+  window.addEventListener('nostr:logout', () => {
+    followingEmpty.textContent = 'Log in to see notes from people you follow.'
+    followingEmpty.hidden = false
+    followingFeed.hidden = true
+    followingFeed.setAttribute('authors', 'none')
+  })
+  if (window.nostrPubkey) loadFollowing(window.nostrPubkey)
+</script>
+</body>
+</html>
