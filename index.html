@@ -87,7 +87,15 @@
 </footer>
 
 <script type="module">
-  import { applySavedRelays } from 'https://nostr-client.github.io/relay-manager/relay-manager.js'
+  // harden + speed up the shared pool BEFORE any component grabs it:
+  // verify inside (drop forged events), cache outside (store only verified)
+  {
+    const { Pool } = await import('https://nostr-client.github.io/pool/pool.js')
+    const { withVerify } = await import('https://nostr-client.github.io/verify/verify.js')
+    const { withCache } = await import('https://nostr-client.github.io/cache/cache.js')
+    globalThis.__nostrClientPool = withCache(withVerify(new Pool()))
+  }
+  const { applySavedRelays } = await import('https://nostr-client.github.io/relay-manager/relay-manager.js')
   applySavedRelays() // restore the user's relay choices before anything subscribes
 
   import('https://nostr-client.github.io/reactions/reactions.js') // notes grow reaction bars
