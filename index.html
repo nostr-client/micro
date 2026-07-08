@@ -139,6 +139,12 @@
     const target = e.detail.targetId ?? parseRefs(e.detail.event).root ?? e.detail.event.id
     openThread(target)
   })
+  document.addEventListener('nostr:hashtag-click', (e) => {
+    currentTab = 'search'
+    show('search')
+    document.querySelector('nostr-search').search('#' + e.detail.tag)
+    scrollTo(0, 0)
+  })
   const initial = location.hash.slice(1)
   if (/^[0-9a-f]{64}$/.test(initial)) { thread.setAttribute('event-id', initial); show('thread') }
 
